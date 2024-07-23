@@ -2669,6 +2669,9 @@ def home():
 @app.route('/convert', methods=['POST'])
 def convert():
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "Invalid input"}), 400
+
     url = data['url']
     filename = data['filename']
 
