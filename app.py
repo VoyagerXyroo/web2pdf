@@ -1,6 +1,5 @@
-from flask import Flask, request, jsonify, send_file, render_template_string
+from flask import Flask, request, send_file, render_template_string, jsonify
 import pdfcrowd
-import io
 import threading
 import os
 import time
@@ -2668,12 +2667,8 @@ def home():
 
 @app.route('/convert', methods=['POST'])
 def convert():
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Invalid input"}), 400
-
-    url = data['url']
-    filename = data['filename']
+    url = request.form['url']
+    filename = request.form['filename']
 
     def background_task():
         pdf_path = convert_url_to_pdf(url, filename)
