@@ -1,8 +1,6 @@
-from flask import Flask, request, send_file, render_template_string, jsonify
+from flask import Flask, request, jsonify, send_file, render_template_string
 import pdfcrowd
-import threading
 import os
-import time
 
 app = Flask(__name__)
 
@@ -2667,18 +2665,15 @@ def home():
 
 @app.route('/convert', methods=['POST'])
 def convert():
-    url = request.form['url']
-    filename = request.form['filename']
+    data = request.get_json()
+    url = data['url']
+    filename = data['filename']
 
-    def background_task():
-        pdf_path = convert_url_to_pdf(url, filename)
-        if pdf_path:
-            os.rename(pdf_path, f"/tmp/{filename}.pdf")
-            # Simulate a delay for testing purposes
-            time.sleep(5)
-
-    threading.Thread(target=background_task).start()
-    return jsonify({"message": "Conversion started. You can download the PDF below."})
+    pdf_path = convert_url_to_pdf(url, filename)
+    if pdf_path:
+        return jsonify({"message": "Conversion successful. You can download the PDF below."})
+    else:
+        return jsonify({"message": "Error during conversion."}), 500
 
 @app.route('/download/<filename>', methods=['GET'])
 def download(filename):
@@ -2686,7 +2681,6 @@ def download(filename):
     if os.path.exists(pdf_path):
         return send_file(pdf_path, as_attachment=True)
     else:
-        return jsonify({"message": "PDF not ready yet. Please try again later."}), 404
+        return jsonify({"message": "PDF not found."}), 404
 
 if __name__ == '__main__':
-    app.run(debug=True)
