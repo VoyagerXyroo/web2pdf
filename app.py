@@ -1,9 +1,9 @@
-from flask import Flask, request, send_file, render_template_string, jsonify
+from flask import Flask, request, jsonify, send_file, render_template_string
 import pdfcrowd
 import io
 import threading
-import time
 import os
+import time
 
 app = Flask(__name__)
 
@@ -2657,8 +2657,10 @@ def convert_url_to_pdf(url, filename):
         pdf_path = f"/tmp/{filename}.pdf"
         with open(pdf_path, 'wb') as pdf_file:
             client.convertUrlToFile(url, pdf_file)
+        return pdf_path
     except Exception as e:
         print(f"Error converting URL to PDF: {e}")
+        return None
 
 @app.route('/', methods=['GET'])
 def home():
@@ -2666,14 +2668,19 @@ def home():
 
 @app.route('/convert', methods=['POST'])
 def convert():
-    url = request.form['url']
-    filename = request.form['filename']
+    data = request.get_json()
+    url = data['url']
+    filename = data['filename']
 
-    # Jalankan proses konversi di latar belakang
-    thread = threading.Thread(target=convert_url_to_pdf, args=(url, filename))
-    thread.start()
+    def background_task():
+        pdf_path = convert_url_to_pdf(url, filename)
+        if pdf_path:
+            os.rename(pdf_path, f"/tmp/{filename}.pdf")
+            # Simulate a delay for testing purposes
+            time.sleep(5)
 
-    return jsonify({"message": "Conversion started. Please check back later to download the PDF."}), 202
+    threading.Thread(target=background_task).start()
+    return jsonify({"message": "Conversion started. You can download the PDF below."})
 
 @app.route('/download/<filename>', methods=['GET'])
 def download(filename):
