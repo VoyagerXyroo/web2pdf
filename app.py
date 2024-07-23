@@ -1,6 +1,6 @@
-from flask import Flask, request, jsonify, send_file, render_template_string
+from flask import Flask, request, send_file, render_template_string
 import pdfcrowd
-import os
+import io
 
 app = Flask(__name__)
 
@@ -2648,39 +2648,27 @@ form_html = '''
 
 '''
 
-def convert_url_to_pdf(url, filename):
-    try:
-        client = pdfcrowd.HtmlToPdfClient('Verrdryd', '95e498806f86b98f79226fdfdd8f62da')
-        pdf_path = f"/tmp/{filename}.pdf"
-        with open(pdf_path, 'wb') as pdf_file:
-            client.convertUrlToFile(url, pdf_file)
-        return pdf_path
-    except Exception as e:
-        print(f"Error converting URL to PDF: {e}")
-        return None
-
 @app.route('/', methods=['GET'])
 def home():
     return render_template_string(form_html)
 
 @app.route('/convert', methods=['POST'])
 def convert():
-    data = request.get_json()
-    url = data['url']
-    filename = data['filename']
+    url = request.form['url']
+    filename = request.form['filename']
 
-    pdf_path = convert_url_to_pdf(url, filename)
-    if pdf_path:
-        return jsonify({"message": "Conversion successful. You can download the PDF below."})
-    else:
-        return jsonify({"message": "Error during conversion."}), 500
+    # Konversi URL menjadi PDF menggunakan pdfcrowd
+    client = pdfcrowd.HtmlToPdfClient('Verrdryd', '95e498806f86b98f79226fdfdd8f62da')
+    pdf = io.BytesIO()
+    client.convertUrlToStream(url, pdf)
+    pdf.seek(0)
 
-@app.route('/download/<filename>', methods=['GET'])
-def download(filename):
-    pdf_path = f"/tmp/{filename}.pdf"
-    if os.path.exists(pdf_path):
-        return send_file(pdf_path, as_attachment=True)
-    else:
-        return jsonify({"message": "PDF not found."}), 404
+    # Kirimkan file PDF sebagai respons unduhan
+    return send_file(
+        pdf,
+        attachment_filename=f"{filename}.pdf",
+        as_attachment=True
+    )
 
 if __name__ == '__main__':
+    app.run(debug=True)
